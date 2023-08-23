@@ -430,6 +430,44 @@ export class u256 {
     return u256.shr(value, shift);
   }
 
+  /**
+   * Left shifts a 256-bit number by a specified number of bits.
+   * 
+   * @param value - The 256-bit number to be shifted.
+   * @param shift - The number of bits to shift.
+   * @returns A new u256 value that represents the shifted number.
+   * 
+   * @remarks
+   * When the shift value is >= 256, the result is always zero. 
+   * For shifts < 0, the function returns the original value without any shifts.
+   */
+  @operator('<<')
+  static shl(value: u256, shift: i32): u256 {
+    if (shift >= 256) return u256.Zero;
+    if (shift <= 0) return value;
+
+    if(shift > 128) {
+      let high: u128 = new u128(value.lo1, value.lo2) << (shift - 128);
+      return new u256(0, 0, high.lo, high.hi);
+    }
+
+    if(shift > 64) {
+      return new u256(
+        0,
+        u64SafeShl(value.lo1, shift - 64),
+        u64SafeShl(value.lo2, shift - 64) | u64SafeShr(value.lo1, 128 - shift),
+        u64SafeShl(value.hi1, shift - 64) | u64SafeShr(value.lo2, 128 - shift)
+      );
+    }
+
+    return new u256(
+      u64SafeShl(value.lo1, shift),
+      u64SafeShl(value.lo2, shift) | u64SafeShr(value.lo1, 64 - shift),
+      u64SafeShl(value.hi1, shift) | u64SafeShr(value.lo2, 64 - shift),
+      u64SafeShl(value.hi2, shift) | u64SafeShr(value.hi1, 64 - shift)
+    );
+  }
+
   @inline @operator('==')
   static eq(a: u256, b: u256): bool {
     return (
