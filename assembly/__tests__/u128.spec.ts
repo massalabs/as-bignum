@@ -1253,3 +1253,36 @@ describe("Throwable", () => {
     }).toThrow();
   });
 });
+
+
+describe("div64 function tests", () => {
+  it("Should divide two numbers without remainder", () => {
+    let a = new u128(6, 0);
+    let b: u64 = 3;
+    expect(a.div64(b)).toStrictEqual([2, 0]);
+  });
+
+  it("Should divide two numbers with a remainder", () => {
+    let a = new u128(7, 0);
+    let b: u64 = 3;
+    expect(a.div64(b)).toStrictEqual([2, 1]);
+  });
+
+  it("Should handle large numbers division correctly", () => {
+    let a = new u128(u64.MAX_VALUE, u64.MAX_VALUE -1);
+    let b: u64 = u64.MAX_VALUE;
+    expect(a.div64(b)).toStrictEqual([u64.MAX_VALUE, u64.MAX_VALUE - 1])
+  });
+
+  it("Should handle division when high part of dividend is 0", () => {
+    let a = new u128(0, 4);
+    let b: u64 = 8;
+    expect(a.div64(b)).toStrictEqual([9223372036854775808, 0]);
+  });
+
+  it("Should return 0 quotient when divisor is larger than dividend", () => {
+    let a = new u128(2, 0);
+    let b: u64 = 8;
+    expect(a.div64(b)).toStrictEqual([0, 2]);
+  });
+});

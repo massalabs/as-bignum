@@ -2,6 +2,8 @@ import { i128 } from './i128';
 import { i256 } from './i256';
 import { u256 } from './u256';
 
+import { u64SafeShl, u64SafeShr, longDivision128by64 } from './helper';
+
 // TODO import this on top level 'index.ts'
 import {
   __clz128,
@@ -727,6 +729,53 @@ export class u128 {
       }
     }
     return q;
+  }
+
+  /**
+   * Divides a 128-bit number by a 64-bit divisor.
+   * 
+   * @param divisor - The 64-bit divisor.
+   * @returns An array containing the quotient and remainder.
+   * @throws {RangeError} If the divisor is zero or if there's an integer overflow.
+   * 
+   * @remarks
+   * The function normalizes the dividend and divisor to align their most significant bits. 
+   * Normalization simplifies the division process and ensures accurate results, especially 
+   * when working with large numbers. After the division, the result is denormalized to provide 
+   * the actual quotient and remainder.
+   */
+  div64(divisor: u64): u64[] {
+    const dividendHigh: u64 = this.hi;
+    const dividendLow: u64 = this.lo;
+
+    if (divisor == 0) {
+      throw new RangeError("Division by zero");
+    }
+
+    // Panic if the result is larger than 64 bits.
+    if (divisor <= dividendHigh) {
+      throw new RangeError("Integer overflow");
+    }
+
+    // Handle simple division when the high part of the dividend is 0.
+    if (dividendHigh == 0) {
+      return [dividendLow / divisor, dividendLow % divisor];
+    }
+
+    const shiftAmount: i32 = i32(clz(divisor));
+    const normalizedDivisor = u64SafeShl(divisor, shiftAmount);
+    
+    // Align the lower part of the dividend with the divisor.
+    const normalizedDividendLow: u64 = u64SafeShl(dividendLow, shiftAmount);
+
+    // Align the higher part of the dividend:
+    // - Shift the high part left by the same amount as the divisor.
+    // - Shift the low part right to retain the most significant bits.
+    const normalizedDividendHigh: u64 = u64SafeShl(dividendHigh, shiftAmount) | u64SafeShr(dividendLow, 64 - shiftAmount);
+
+    const response = longDivision128by64(normalizedDividendHigh, normalizedDividendLow, normalizedDivisor);
+
+    return [response[0], u64SafeShr(response[1], shiftAmount)];
   }
 
   /**
