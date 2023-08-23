@@ -440,3 +440,35 @@ describe("Basic Operations", () => {
   });
 
 });
+
+describe("Bit shift", () => {
+  it("Should right shift a number by a small value", () => {
+    let a = new u256(0, 1, 0, 0);
+    expect(u256.shr(a, 64)).toStrictEqual(new u256(1, 0, 0, 0));
+  });
+
+  it("Should right shift a number by more than 128 bits", () => {
+    let a = new u256(0, 1, 0, 0);
+    expect(u256.shr(a, 129)).toStrictEqual(new u256(0, 0, 0, 0));
+  });
+
+  it("Should right shift a number by more than 64 but less than 128 bits", () => {
+    let a = new u256(0, 0, 1, 0);
+    expect(u256.shr(a, 65)).toStrictEqual(new u256(9223372036854775808, 0, 0, 0));
+  });
+
+  it("Should return zero when right shifted by 256 bits", () => {
+    let a = new u256(1, 1, 1, 1);
+    expect(u256.shr(a, 256)).toStrictEqual(new u256(0, 0, 0, 0));
+  });
+
+  it("Should return the same number when shifted by 0", () => {
+    let a = new u256(4, 3, 2, 1);
+    expect(u256.shr(a, 0)).toStrictEqual(new u256(4, 3, 2, 1));
+  });
+
+  it("Should right shift a large number correctly", () => {
+    let a = new u256(u64.MAX_VALUE, u64.MAX_VALUE, u64.MAX_VALUE, u64.MAX_VALUE);
+    expect(u256.shr(a, 64)).toStrictEqual(new u256(u64.MAX_VALUE, u64.MAX_VALUE, u64.MAX_VALUE, 0));
+  });
+});

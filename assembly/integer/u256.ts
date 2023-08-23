@@ -2,6 +2,7 @@ import { i128 } from './i128';
 import { u128 } from './u128';
 import { u256toDecimalString } from "../utils";
 import { __mul256 } from '../globals';
+import { u64SafeShl, u64SafeShr, longDivision128by64 } from './helper';
 
 @lazy const HEX_CHARS = '0123456789abcdef';
 
@@ -386,26 +387,42 @@ export class u256 {
     return new u256(a.lo1 & b.lo1, a.lo2 & b.lo2, a.hi1 & b.hi1, a.hi2 & b.hi2);
   }
 
+  /**
+   * Right shifts a 256-bit number by a specified number of bits.
+   * 
+   * @param value - The 256-bit number to be shifted.
+   * @param shift - The number of bits to shift.
+   * @returns A new u256 value that represents the shifted number.
+   * 
+   * @remarks
+   * When the shift value is >= 256, the result is always zero. 
+   * For shifts < 0, the function returns the original value without any shifts.
+   */
   @operator('>>')
   static shr(value: u256, shift: i32): u256 {
-    shift &= 255;
-    var off = shift as u64;
-    if (shift <= 64) {
-      if (shift == 0) return value;
-      let hi2 =  value.hi2 >> off;
-      let hi1 = (value.hi1 >> off) | (value.hi2 << 64 - off);
-      let lo2 = (value.lo2 >> off) | (value.hi1 << 64 - off);
-      let lo1 = (value.lo1 >> off) | (value.lo2 << 64 - off);
-      return new u256(lo1, lo2, hi1, hi2);
-    } else if (shift > 64 && shift <= 128) {
-      let hi1 = value.hi2 >> 128 - off;
-      return new u256(value.lo2, value.hi1, hi1);
-    } else if (shift > 128 && shift <= 192) {
-      let lo2 = value.hi2 >> 192 - off;
-      return new u256(value.hi1, lo2);
-    } else {
-      return new u256(value.hi2 >> 256 - off);
+    if (shift >= 256) return u256.Zero;
+    if (shift <= 0) return value;
+
+    if(shift > 128) {
+      let low = new u128(value.hi1, value.hi2) >> (shift - 128);
+      return new u256(low.lo, low.hi, 0, 0);
     }
+
+    if(shift > 64) {
+      return new u256(
+        u64SafeShr(value.lo2, shift - 64) | u64SafeShl(value.hi1, 128 - shift),
+        u64SafeShr(value.hi1, shift - 64) | u64SafeShl(value.hi2, 128 - shift),
+        u64SafeShr(value.hi2, shift - 64),
+        0
+      );
+    }
+
+    return new u256(
+      u64SafeShr(value.lo1, shift) | u64SafeShl(value.lo2, 64 - shift),
+      u64SafeShr(value.lo2, shift) | u64SafeShl(value.hi1, 64 - shift),
+      u64SafeShr(value.hi1, shift) | u64SafeShl(value.hi2, 64 - shift),
+      u64SafeShr(value.hi2, shift)
+    );
   }
 
   @inline @operator('>>>')
