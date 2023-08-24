@@ -518,6 +518,107 @@ export class u256 {
     return __mul256(a.lo1, a.lo2, a.hi1, a.hi2, b.lo1, b.lo2, b.hi1, b.hi2)
   }
 
+  @inline @operator('%')
+  static rem(a: u256, b: u256): u256 {
+    return quoRem(a, b)[1];
+  }
+
+  @inline @operator('/')
+  static div(a: u256, b: u256): u256 {
+    return quoRem(a, b)[0];
+  }
+
+  /**
+   * Returns the quotient and remainder of dividing a 256-bit number by another 256-bit number.
+   *
+   * @param divisor - The 256-bit divisor.
+   * @returns An array containing the quotient and remainder, both as u256.
+   * @throws {RangeError} If the divisor is zero.
+   *
+   */
+  quoRem(divisor: u256): u256[] {
+    if (this < divisor) return [u256.Zero, this];
+
+    const dividendHigh = new u128(this.hi1, this.hi2);
+    const dividendLow = new u128(this.lo1, this.lo2);
+    const divisorHigh = new u128(divisor.hi1, divisor.hi2);
+    const divisorLow = new u128(divisor.lo1, divisor.lo2);
+
+    if (divisorHigh == u128.Zero) {
+      // If the result fit in a u128,
+      // then the division can be done directly using div64.
+      if (dividendHigh < divisorLow) {
+        const resp = this.div128(divisorLow);
+        return [u256.fromU128(resp[0]), u256.fromU128(resp[1])];
+      }
+
+      // Otherwise, we need to use long division.
+
+      let res = u256.fromU128(dividendHigh).div128(divisorLow);
+      const quotientHigh = res[0];
+      let remainderHigh = res[1];
+
+      res = new u256(
+        dividendLow.lo,
+        dividendLow.hi,
+        remainderHigh.lo,
+        remainderHigh.hi
+      ).div128(divisorLow);
+
+      const quotientLow = res[0];
+      const remainderLow = res[1];
+
+      return [
+        new u256(
+          quotientLow.lo,
+          quotientLow.hi,
+          quotientHigh.lo,
+          quotientHigh.hi
+        ),
+        u256.fromU128(remainderLow),
+      ];
+    }
+
+    // Normalize the divisor and dividend.
+    const shiftAmount: i32 = i32(clz(divisor.hi1) + clz(divisor.hi2));
+    
+    const normalizedDivisor: u256 = divisor << shiftAmount;
+
+    const normalizedDividend: u256 = this >> 1;
+    const normalizedDividendLow: u128 = new u128(
+      normalizedDividend.lo1,
+      normalizedDividend.lo2
+    );
+    const normalizedDividendHigh: u128 = new u128(
+      normalizedDividend.hi1,
+      normalizedDividend.hi2
+    );
+
+    let quotientHigh: u128 = longDivision256by128(
+      normalizedDividendHigh,
+      normalizedDividendLow,
+      new u128(normalizedDivisor.hi1, normalizedDivisor.hi2)
+    )[0];
+    quotientHigh = quotientHigh >> (127 - shiftAmount);
+
+    // Force the quotient to be an underestimate.
+    if (quotientHigh != u128.Zero) {
+      quotientHigh -= u128.One;
+    }
+
+    // Calculate the remainder using the quotient.
+    let quotient: u256 = u256.fromU128(quotientHigh);
+    let remainder: u256 = this - divisor * quotient;
+
+    // Adjust the quotient and remainder if necessary.
+    if (remainder >= divisor) {
+      quotient += u256.One;
+      remainder -= divisor;
+    }
+
+    return [quotient, remainder];
+  }
+
   /**
    * Divides a 256-bit number by a 128-bit divisor.
    * 

@@ -533,3 +533,51 @@ describe("div128", () => {
     expect(a.div128(b)).toStrictEqual([u128.from(3), u128.from(1)]);
   });
 });
+
+
+describe("quoRem function tests", () => {
+  it("Should divide two numbers without remainder", () => {
+    const a = new u256(2, 0, 0, 0);
+    expect(a.quoRem(a)).toStrictEqual([u256.One, u256.Zero]);
+  });
+
+  it("Should handle division with a remainder", () => {
+    const a = u256.from(5);
+    const b = u256.from(3);
+    const quotient = u256.from(1);
+    const remainder = u256.from(2);
+    expect(a.quoRem( b)).toStrictEqual([quotient, remainder]);
+  });
+
+  it("Should handle division with no quotient", () => {
+    const a = u256.from(3);
+    const b = u256.from(5);
+    const quotient = u256.from(0);
+    const remainder = u256.from(3);
+    expect(a.quoRem( b)).toStrictEqual([quotient, remainder]);
+  });
+
+  it("Should handle max values", () => {
+    const a = u256.Max;
+    const b = u256.fromU128(u128.Max);
+    const quotient = new u256(1, 0, 1, 0);
+    const remainder = u256.from(0);
+    expect(a.quoRem( b)).toStrictEqual([quotient, remainder]);
+  });
+
+  it("Should handle null dividendLow", () => {
+    const a = new u256(0, 0, 5, 0);
+    const b = u256.from(3);
+    const quotient = new u256(0xaaaaaaaaaaaaaaaa, 0xaaaaaaaaaaaaaaaa, 1, 0);
+    const remainder = u256.from(2);
+    expect(a.quoRem( b)).toStrictEqual([quotient, remainder]);
+  });
+
+  it("Should handle null divisor low", () => {
+    const a = new u256(0, 0, 5, 0);
+    const b = new u256(0, 0, 3, 0);
+    const quotient = u256.from(1);
+    const remainder = new u256(0, 0, 2, 0);
+    expect(a.quoRem(b)).toStrictEqual([quotient, remainder]);
+  });
+});
