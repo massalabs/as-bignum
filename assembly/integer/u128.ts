@@ -779,6 +779,35 @@ export class u128 {
   }
 
   /**
+   * Returns the quotient and remainder of dividing a 128-bit number by a 64-bit number.
+   * 
+   * @param divisor - The 64-bit divisor.
+   * @returns An array containing the quotient and remainder, both as u128.
+   * 
+   * @remarks
+   * The function uses the long division principle to divide a 128-bit dividend by a 64-bit divisor.
+   * The high and low 64-bit parts of the 128-bit dividend are divided separately by the 64-bit divisor.
+   */
+  quoRem(divisor: u64): u128[] {
+    const dividendHigh = this.hi;
+    const dividendLow = this.lo;
+
+    // If the high part of the dividend is smaller than the divisor,
+    // then the division can be done directly using div64.
+    if (dividendHigh < divisor) {
+      const quotientAndRemainder = this.div64(divisor)
+      return [new u128(quotientAndRemainder[0]), new u128(quotientAndRemainder[1])]
+    }
+
+    let quotientAndRemainder = new u128(dividendHigh, 0).div64(divisor)
+    const quotientHigh = quotientAndRemainder[0]
+    const remainderHigh = quotientAndRemainder[1]
+
+    quotientAndRemainder = new u128(dividendLow, remainderHigh).div64(divisor)
+    return [ new u128(quotientAndRemainder[0], quotientHigh), new u128(quotientAndRemainder[1]) ];
+  }
+
+  /**
   * Convert to 256-bit signed integer
   * @returns 256-bit signed integer
   */
