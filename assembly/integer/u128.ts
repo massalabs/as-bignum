@@ -777,7 +777,7 @@ export class u128 {
 
     return [response[0], u64SafeShr(response[1], shiftAmount)];
   }
-
+  
   /**
    * Returns the quotient and remainder of dividing a 128-bit number by a 64-bit number.
    * 
@@ -1029,4 +1029,45 @@ export class u128 {
     }
     return u128toDecimalString(this);
   }
+}
+
+
+/**
+ * Safely shifts a 128-bit unsigned integer to the right.
+ * Throws an error for negative shifts and returns 0 for shifts >= 128.
+ *
+ * @param value - The 128-bit unsigned integer to be shifted.
+ * @param shift - The number of positions to shift to the right.
+ * @returns The shifted value.
+ */
+export function safeShr(value: u128, shift: i32): u128 {
+  if (shift < 0) {
+    throw new RangeError("Negative shift");
+  }
+
+  if (shift >= 128) {
+    return u128.Zero;
+  }
+
+  return value >> shift;
+}
+
+/**
+ * Safely shifts a 128-bit unsigned integer to the left.
+ * Throws an error for negative shifts and returns 0 for shifts >= 128.
+ *
+ * @param value - The 128-bit unsigned integer to be shifted.
+ * @param shift - The number of positions to shift to the left.
+ * @returns The shifted value.
+ */
+export function safeShl(value: u128, shift: i32): u128 {
+  if (shift < 0) {
+    throw new RangeError("Negative shift");
+  }
+
+  if (shift >= 128) {
+    return u128.Zero;
+  }
+
+  return value << shift;
 }

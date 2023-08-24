@@ -1,4 +1,4 @@
-import { u128 } from '../integer/u128';
+import { u128, safeShl, safeShr } from '../integer/u128';
 import { arrayToUint8Array } from "./utils";
 
 describe("String Conversion", () => {
@@ -1328,5 +1328,36 @@ describe("quoRem function tests", () => {
     const remainder = u128.Zero;
     expect(a.quoRem(b)).toStrictEqual([quotient, remainder]);
   });
-
 });
+
+describe("Safe bit shift function tests", () => {
+
+  it("Should shift a number to the right", () => {
+    const a = u128.from("16");
+    const shift: i32 = 2;
+    const result = u128.from("4");
+    expect(safeShr(a, shift)).toStrictEqual(result);
+  });
+
+  it("Should return zero for right shifts >= 128", () => {
+    const a = u128.from("16");
+    const shift: i32 = 128;
+    const result = u128.Zero;
+    expect(safeShr(a, shift)).toStrictEqual(result);
+  });
+
+  it("Should shift a number to the left", () => {
+    const a = u128.from("4");
+    const shift: i32 = 2;
+    const result = u128.from("16");
+    expect(safeShl(a, shift)).toStrictEqual(result);
+  });
+
+  it("Should return zero for left shifts >= 128", () => {
+    const a = u128.from("4");
+    const shift: i32 = 128;
+    const result = u128.Zero;
+    expect(safeShl(a, shift)).toStrictEqual(result);
+  });
+});
+
