@@ -502,3 +502,34 @@ describe("Bit shift", () => {
     expect(u256.shl(a, 64)).toStrictEqual(new u256(0, u64.MAX_VALUE, u64.MAX_VALUE, u64.MAX_VALUE));
   });
 });
+
+describe("div128", () => {
+  it("div128 - should divide small numbers", () => {
+    var a = u256.from(3);
+    var b = u128.from(1);
+
+    expect(a.div128(b)).toStrictEqual([u128.from(3), u128.Zero]);
+  });
+
+  it("div128 - should handle division by one", () => {
+    var a = u256.from(123456789);
+    var b = u128.from(1);
+
+    expect(a.div128(b)).toStrictEqual([u128.from(123456789), u128.Zero]);
+  });
+
+  it("div128 - should handle zero dividend", () => {
+    var a = u256.from(0);
+    var b = u128.from(123456789);
+
+    expect(a.div128(b)).toStrictEqual([u128.Zero, u128.Zero]);
+  });
+
+  // Tests with remainder
+  it("div128 - should handle divisions with remainder", () => {
+    var a = u256.from(10);
+    var b = u128.from(3);
+
+    expect(a.div128(b)).toStrictEqual([u128.from(3), u128.from(1)]);
+  });
+});

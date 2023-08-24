@@ -1,8 +1,8 @@
 import { i128 } from './i128';
-import { u128 } from './u128';
+import { u128, safeShl, safeShr } from './u128';
 import { u256toDecimalString } from "../utils";
 import { __mul256 } from '../globals';
-import { u64SafeShl, u64SafeShr, longDivision128by64 } from './helper';
+import { u64SafeShl, u64SafeShr } from './helper';
 
 @lazy const HEX_CHARS = '0123456789abcdef';
 
@@ -518,6 +518,46 @@ export class u256 {
     return __mul256(a.lo1, a.lo2, a.hi1, a.hi2, b.lo1, b.lo2, b.hi1, b.hi2)
   }
 
+  /**
+   * Divides a 256-bit number by a 128-bit divisor.
+   * 
+   * @param divisor - The 128-bit divisor.
+   * @returns An array containing the quotient and remainder, both as u128.
+   * @throws {RangeError} If the divisor is zero or if the result will be larger than 128 bits.
+   * 
+   * @remarks
+   * The function employs a long division method adapted for 256-bit numbers divided by 128-bit numbers.
+   * The algorithm starts by normalizing the divisor and dividend to align their most significant bits.
+   * This is done by shifting both the divisor and the dividend by the count of leading zeros in the divisor.
+   * The function then calls `longDivision256by128` to perform the actual division on the normalized numbers.
+   * Finally, the remainder is denormalized by shifting it back to the right by the same amount used to normalize the divisor.
+   */
+  div128(divisor: u128): u128[] {
+    const dividendHigh: u128 = new u128(this.hi1, this.hi2);
+    const dividendLow: u128 = new u128(this.lo1, this.lo2);
+
+    if (divisor == u128.Zero) throw new RangeError("Division by zero");
+
+    // Panic if the result won't fit in a 128-bits number.
+    if (dividendHigh >= divisor) throw new RangeError("Integer overflow");
+
+    const shiftAmount: i32 = i32(u128.clz(divisor));
+
+    const normalizedDivisor: u128 = safeShl(divisor, shiftAmount);
+
+    // Align the lower part of the dividend with the divisor.
+    const normalizedDividendLow: u128 = safeShl(dividendLow, shiftAmount);
+
+    // Align the higher part of the dividend:
+    // - Shift the high part left by the same amount as the divisor.
+    // - Shift the low part right to retain the most significant bits.
+    const normalizedDividendHigh: u128 = safeShl(dividendHigh, shiftAmount) | safeShr(dividendLow, 128 - shiftAmount);
+
+    const response = longDivision256by128(normalizedDividendHigh, normalizedDividendLow, normalizedDivisor);
+    
+    return [ response[0], safeShr(response[1], shiftAmount) ];
+  }
+
   @inline
   static popcnt(value: u256): i32 {
     var count = popcnt(value.lo1);
@@ -732,4 +772,71 @@ export class u256 {
     }
     return u256toDecimalString(this);
   }
+}
+
+/**
+ * Divides a 256-bit number by a 128-bit divisor.
+ * 
+ * @param dividendHigh - The high 128 bits of the dividend.
+ * @param dividendLow - The low 128 bits of the dividend.
+ * @param divisor - The 128-bit divisor.
+ * @returns An array containing the quotient and remainder, both as u128.
+ * @throws {RangeError} If the divisor is zero or if the result will be larger than 128 bits.
+ * 
+ * @remarks
+ * The algorithm employs a long division method adapted for 256-bit numbers. 
+ * It breaks down the dividend and divisor into 128-bit chunks and processes them iteratively.
+ * The method ensures that the quotient and remainder fit within their respective bounds by 
+ * adjusting them in a loop. The algorithm first calculates the high part of the quotient and 
+ * remainder, then proceeds to the low part, combining them at the end.
+ */
+function longDivision256by128(dividendHigh: u128, dividendLow: u128, divisor: u128): u128[] {
+  if (divisor == u128.Zero) throw new RangeError("Division by zero");
+  
+  // Check if the result will be larger than 128 bits.
+  if (dividendHigh >= divisor) throw new RangeError("Integer overflow");
+
+  // Initial quotient and remainder estimation for the high part.
+  let quoRem = dividendHigh.quoRem(divisor.hi);
+  let quotientHigh = quoRem[0];
+  let remainderHigh = quoRem[1];
+
+  // Adjust the high quotient and remainder.
+  while (
+     // if quotientHigh doesn't fit in a u64
+    quotientHigh.hi != 0
+    // or if the estimated quotient and the divisor are to large for the next next portion of the dividend 
+    || quotientHigh * u128.fromU64(divisor.lo) > new u128(dividendLow.hi, remainderHigh.lo)
+  ) {
+    quotientHigh -= u128.One;
+    remainderHigh += u128.fromU64(divisor.hi);
+    if (remainderHigh.hi != 0) {
+      break;
+    }
+  }
+
+  // Calculate the next portion of the dividend.
+  const combinedRemainder: u128 = new u128(dividendLow.hi, dividendHigh.lo) - quotientHigh * divisor;
+
+  // Initial quotient and remainder estimation for the low part.
+  quoRem = combinedRemainder.quoRem(divisor.hi);
+  let quotientLow = quoRem[0];
+  let remainderLow = quoRem[1];
+
+  // Adjust the low quotient and remainder.
+  while (
+    quotientLow.hi != 0
+    || quotientLow * u128.fromU64(divisor.lo) > new u128(dividendLow.lo, remainderLow.lo)
+  ) {
+    quotientLow -= u128.One;
+    remainderLow += u128.fromU64(divisor.hi);
+    if (remainderLow.hi != 0) {
+      break;
+    }
+  }
+      
+  return [
+    new u128(quotientLow.lo, quotientHigh.lo),
+    new u128(dividendLow.lo, combinedRemainder.lo) - quotientLow * divisor,
+  ];
 }
