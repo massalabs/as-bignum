@@ -520,12 +520,12 @@ export class u256 {
 
   @inline @operator('%')
   static rem(a: u256, b: u256): u256 {
-    return quoRem(a, b)[1];
+    return a.quoRem(b)[1];
   }
 
   @inline @operator('/')
   static div(a: u256, b: u256): u256 {
-    return quoRem(a, b)[0];
+    return a.quoRem(b)[0];
   }
 
   /**
