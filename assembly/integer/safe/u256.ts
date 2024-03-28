@@ -146,6 +146,54 @@ class u256 extends U256 {
     if (a < b) throw new RangeError("Underflow during subtraction");
     return changetype<u256>(U256.sub(changetype<U256>(a), changetype<U256>(b)));
   }
+
+  @operator("*")
+  static mul(a: u256, b: u256): u256 {
+    if (a.isZero() || b.isZero()) {
+      return u256.Zero;
+    }
+
+    var s = u256.clz(a) + u256.clz(b);
+    if (s < 255) {
+      // Definitely overflow
+      throw new RangeError("Overflow during multiplication");
+    }
+
+    if (s == 255) {
+      // This may overflow or not. Need extra checks.
+      // See Hacker's Delight, 2nd Edition. 2–13 Overflow Detection
+      // @ts-ignore
+      let tmp = U256.mul(changetype<U256>(a), changetype<U256>(b) >> 1);
+      if (tmp.hi2 >>> 63) { // (signed)t < 0
+        throw new RangeError("Overflow during multiplication");
+      }
+      // @ts-ignore
+      let z = tmp << 1;
+      if (b.lo1 & 1) {
+        // @ts-ignore
+        z += a;
+        // @ts-ignore
+        if (z < a) {
+          throw new RangeError("Overflow during multiplication");
+        }
+      }
+      return changetype<u256>(z);
+    }
+
+    return changetype<u256>(U256.mul(changetype<U256>(a), changetype<U256>(b)));
+  }
+
+  @inline
+  @operator("/")
+  static div(a: u256, b: u256): u256 {
+    return changetype<u256>(U256.div(a, b));
+  }
+
+  @inline
+  @operator("%")
+  static rem(a: u256, b: u256): u256 {
+    return changetype<u256>(U256.rem(a, b));
+  }
 }
 
 export { u256 as u256Safe };
