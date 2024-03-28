@@ -47,9 +47,19 @@ describe("Basic Operations", () => {
       expect(b + a).toStrictEqual(r);
     });
     it("Should add two numbers 3", () => {
-      var a = new u256Safe(6064648183073788001, 18412591705276258226, 18446744073709551615, 9223372036854775807);
+      var a = new u256Safe(
+        6064648183073788001,
+        18412591705276258226,
+        18446744073709551615,
+        9223372036854775807
+      );
       var b = new u256Safe(3061651127733543934, 42442096056813094);
-      var r = new u256Safe(9126299310807331935, 8289727623519704, 0, 9223372036854775808);
+      var r = new u256Safe(
+        9126299310807331935,
+        8289727623519704,
+        0,
+        9223372036854775808
+      );
       expect(a + b).toStrictEqual(r);
       expect(b + a).toStrictEqual(r);
     });
@@ -94,10 +104,61 @@ describe("Basic Operations", () => {
       expect(a - b).toStrictEqual(r);
     });
     it("Should sub two numbers 3", () => {
-      var a = new u256Safe(6064648183073788001, 18412591705276258226, 18446744073709551615, 9223372036854775807);
+      var a = new u256Safe(
+        6064648183073788001,
+        18412591705276258226,
+        18446744073709551615,
+        9223372036854775807
+      );
       var b = new u256Safe(3061651127733543934, 42442096056813094);
-      var r = new u256Safe(3002997055340244067, 18370149609219445132, 18446744073709551615, 9223372036854775807);
+      var r = new u256Safe(
+        3002997055340244067,
+        18370149609219445132,
+        18446744073709551615,
+        9223372036854775807
+      );
       expect(a - b).toStrictEqual(r);
+    });
+  });
+  describe("MUL", () => {
+    it("Should multiply two numbers 1", () => {
+      var a = u256Safe.from(43545453452);
+      var b = u256Safe.Zero;
+      expect(a * b).toStrictEqual(u256Safe.Zero);
+    });
+    it("Should multiply two numbers 2", () => {
+      var a = u256Safe.from(43545453452);
+      var b = u256Safe.One;
+      expect(a * b).toStrictEqual(a);
+    });
+    it("Should multiply two numbers 3", () => {
+      var a = u256Safe.Max;
+      var b = u256Safe.One;
+      expect(a * b).toStrictEqual(a);
+    });
+    it("Should multiply two numbers 4", () => {
+      var a = u256Safe.from(43545453452);
+      var b = u256Safe.from(2353454354);
+      expect(a * b).toStrictEqual(new u256Safe(10248516654965971928, 5));
+    });
+    it("Should multiply two numbers which clz(a) + clz(b) == 255 but not overflow", () => {
+      var a = new u256Safe(12919400065614042453, 180, 0, 0);
+      var b = new u256Safe(
+        2558044588346441728,
+        1801421225117016759,
+        88162076311671563,
+        0
+      );
+      var r = new u256Safe(
+        5296233161787703296,
+        17841151846691307288,
+        5298105704908565946,
+        15930919111324522770
+      );
+      expect(u256Safe.clz(a)).toBe(184);
+      expect(u256Safe.clz(b)).toBe(71);
+      expect(u256Safe.clz(a) + u256Safe.clz(b)).toBe(255);
+      expect(a * b).toStrictEqual(r);
     });
   });
 });
@@ -153,6 +214,63 @@ describe("Overflow Underflow Throwable", () => {
         var a = u256Safe.Zero;
         var b = u256Safe.One;
         !(a - b);
+      }).toThrow();
+    });
+  });
+
+  /* -------------------------------------------------------------------------- */
+  /*                                MUL OVERFLOW                                */
+  /* -------------------------------------------------------------------------- */
+  describe("MUL", () => {
+    it("Should throw multiply two numbers with overflow 1", () => {
+      expect(() => {
+        var a = new u256Safe(0, 0, 0, 1);
+        !(a * a);
+      }).toThrow();
+    });
+    it("Should throw multiply two numbers with overflow 2", () => {
+      expect(() => {
+        var a = new u256Safe(1, 1, 1, 1);
+        !(a * a);
+      }).toThrow();
+    });
+    it("Should throw multiply two numbers with overflow 3", () => {
+      expect(() => {
+        var a = u256Safe.Max;
+        var b = u256Safe.from(2);
+        !(a * b);
+      }).toThrow();
+    });
+    it("Should throw multiply two numbers with overflow 4", () => {
+      expect(() => {
+        var a = u256Safe.Max;
+        var b = u256Safe.Max;
+        !(a * b);
+      }).toThrow();
+    });
+
+    it("Should throw multiply two numbers which clz(a) + clz(b) == 255", () => {
+      let a = new u256Safe(
+        14773442851077357567,
+        13236297299247328668,
+        58774,
+        0
+      );
+      let b = new u256Safe(4003012203950112767, 542101086242752, 0, 0);
+
+      expect(u256Safe.clz(a)).toBe(112);
+      expect(u256Safe.clz(b)).toBe(143);
+      expect(u256Safe.clz(a) + u256Safe.clz(b)).toBe(255);
+
+      expect(() => {
+        const a = new u256Safe(
+          14773442851077357567,
+          13236297299247328668,
+          58774,
+          0
+        );
+        const b = new u256Safe(4003012203950112767, 542101086242752, 0, 0);
+        a * b;
       }).toThrow();
     });
   });
